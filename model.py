@@ -44,7 +44,7 @@ class Helper:
 
     def train_LSTM_model(self,X,y):
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, shuffle = False, stratify = None,random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, shuffle = False, stratify = None)
 
         X_train = X_train.values.reshape((X_train.values.shape[0], 1, X_train.shape[1]))
         X_test = X_test.values.reshape((X_test.values.shape[0], 1, X_test.shape[1]))
@@ -58,10 +58,10 @@ class Helper:
         # fit network
         history = model.fit(X_train, y_train, epochs=100, batch_size=8, validation_data=(X_test, y_test), verbose=0, shuffle=False)
         # plot history
-        plt.plot(history.history['loss'], label='train')
-        plt.plot(history.history['val_loss'], label='test')
-        plt.legend()
-        plt.show()
+        #plt.plot(history.history['loss'], label='train')
+        #plt.plot(history.history['val_loss'], label='test')
+        #plt.legend()
+        #plt.show()
 
         predictions = model.predict(X_test)
 
@@ -75,18 +75,18 @@ class Helper:
         print('MAPE : %.3f' % pct +'%' )
 
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x = np.arange(len(y_train)),
-                                     y = y_train,
+        fig.add_trace(go.Scatter(x = np.arange(0,len(y_train)),
+                                     y = y_train['var1(t)'],
                                      mode='lines+markers', name='Train'))
         fig.add_trace(go.Scatter(x = np.arange(len(X_train),len(X_train)+len(actual)),
-                                     y = actual,
+                                     y = actual['var1(t)'],
                                      mode='lines+markers', name='Actual'))
         fig.add_trace(go.Scatter(x = np.arange(len(X_train),len(X_train)+len(actual)),
-                                     y = predictions,
+                                     y = predictions[:,0],
                                      mode='lines+markers', name='Prediction'))
         fig.update_layout(title="Mean Abs. Pct Error " + '%'+str(round(pct,2)),
                             xaxis_title="Months",
-                            yaxis_title="Amount")
+                            yaxis_title="Price")
         fig.show()
 
         return model
@@ -94,16 +94,21 @@ class Helper:
 
 def main():
     usd=pd.read_csv('usdtry.csv')
+    usd.Date = pd.to_datetime(usd.Date)
+    usd.index = usd.Date
+    usd = usd.resample('W', on="Date").mean()
 
     dataset = pd.DataFrame()
-
     dataset['USD'] = usd.Price
+    print(dataset.head())
 
     helper = Helper()
     reframed = helper.generateDataSet(dataset, 2, 1)
 
     y = pd.DataFrame(reframed['var1(t)'])
     X = reframed.drop(columns=['var1(t)'])
+
+    print(X.head())
 
     model = helper.train_LSTM_model(X,y)
     model.save("model")
